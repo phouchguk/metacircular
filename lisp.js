@@ -809,6 +809,7 @@ var primitiveProcedures = list(
   list("car", car),
   list("cdr", cdr),
   list("cons", cons),
+  list("eq?", boolify(eq)),
   list("error", error),
   list("null?", boolify(nullP)),
   list("number?", boolify(numberP)),
