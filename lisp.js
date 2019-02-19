@@ -698,6 +698,39 @@ ap = function(procedure, arguments) {
   return { env: env, exp: exp };
 };
 
+// BIF
+
+var boolify = function(f) {
+  return function(x) {
+    return f(x) ? "true" : "false";
+  };
+};
+
+var error = function() {
+  var args = [].slice.call(arguments);
+  var len = args.length;
+
+  if (len > 1) {
+    for (var i = 1; i < len; i++) {
+      console.log(print(args[i], true));
+    }
+  }
+
+  throw new Error(args[0]);
+};
+
+var numberP = function(x) {
+  return typeof x === "number";
+};
+
+var stringP = function(x) {
+  return typeof x === "string" && x[0] === "$";
+};
+
+var symbolP = function(x) {
+  return typeof x === "string" && x[0] !== "$";
+};
+
 // RUN
 
 var mapr = function(f, xs) {
@@ -715,7 +748,11 @@ var primitiveProcedures = list(
   list("car", car),
   list("cdr", cdr),
   list("cons", cons),
-  list("null?", nullP)
+  list("error", error),
+  list("null?", boolify(nullP)),
+  list("number?", boolify(numberP)),
+  list("string?", boolify(stringP)),
+  list("symbol?", boolify(symbolP))
 );
 
 var primitiveProcedureNames = function() {
@@ -745,7 +782,19 @@ var setupEnvironment = function() {
 
 var theGlobalEnvironment = setupEnvironment();
 
+var fs = require("fs");
 var readline = require("readline");
+
+console.log(
+  print(
+    evl(
+      parse(tokenise("(begin " + fs.readFileSync("lisp.lisp") + ")")),
+      theGlobalEnvironment
+    ),
+    true
+  )
+);
+
 var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
