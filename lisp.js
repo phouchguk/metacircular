@@ -122,6 +122,16 @@ pairP = function(x) {
   return x instanceof Pair;
 };
 
+var setCar = function(p, val) {
+  p.car = val;
+  return "ok";
+};
+
+var setCdr = function(p, val) {
+  p.cdr = val;
+  return "ok";
+};
+
 // PARSE
 
 var parse;
@@ -701,8 +711,9 @@ ap = function(procedure, arguments) {
 // BIF
 
 var boolify = function(f) {
-  return function(x) {
-    return f(x) ? "true" : "false";
+  return function() {
+    var args = [].slice.call(arguments);
+    return f.apply(null, args) ? "true" : "false";
   };
 };
 
@@ -716,7 +727,19 @@ var error = function() {
     }
   }
 
-  throw new Error(args[0]);
+  throw new Error(print(args[0], true));
+};
+
+var add = function(a, b) {
+  return a + b;
+};
+
+var eq = function(a, b) {
+  return a === b;
+};
+
+var lt = function(a, b) {
+  return a < b;
 };
 
 var numberP = function(x) {
@@ -745,12 +768,17 @@ var mapr = function(f, xs) {
 };
 
 var primitiveProcedures = list(
+  list("+", add),
+  list("=", boolify(eq)),
+  list("<", boolify(lt)),
   list("car", car),
   list("cdr", cdr),
   list("cons", cons),
   list("error", error),
   list("null?", boolify(nullP)),
   list("number?", boolify(numberP)),
+  list("set-car!", setCar),
+  list("set-cdr!", setCdr),
   list("string?", boolify(stringP)),
   list("symbol?", boolify(symbolP))
 );
