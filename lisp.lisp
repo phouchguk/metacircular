@@ -2,11 +2,17 @@
   (set-car! frame (cons var (car frame)))
   (set-cdr! frame (cons val (cdr frame))))
 
+(define (caar exp) (car (car exp)))
+(define (cadr exp) (car (cdr exp)))
+(define (cdar exp) (cdr (car exp)))
+(define (cddr exp) (cdr (cdr exp)))
+
 (define (enclosing-environment env) (cdr env))
 
 (define (eval exp env)
   (cond ((self-evaluating? exp) exp)
         ((variable? exp) (lookup-variable-value exp env))
+        ((quoted? exp) (text-of-quotation exp))
         (else (error "Unknown expression type -- EVAL" env))))
 
 (define (extend-environment vars vals base-env)
@@ -45,10 +51,20 @@
 (define (make-frame variables values)
   (cons variables values))
 
+(define (quoted? exp)
+  (tagged-list? exp 'quote))
+
 (define (self-evaluating? exp)
   (cond ((number? exp) true)
         ((string? exp) true)
         (else false)))
+
+(define (tagged-list? exp tag)
+  (if (pair? exp)
+      (eq? (car exp) tag)
+    false))
+
+(define (text-of-quotation exp) (cadr exp))
 
 (define the-empty-environment '())
 
