@@ -493,6 +493,32 @@ length = function(seq) {
   return i;
 };
 
+var letBody = function(exp) {
+  return cdr(cdr(exp));
+};
+
+var letP = function(p) {
+  return taggedListP(p, "let");
+};
+
+var letValues, letVariables, makeLet;
+
+var letToLambda = function(exp) {
+  return makeLet(letVariables(exp), letValues(exp), letBody(exp));
+};
+
+var mapr;
+
+letValues = function(exp) {
+  return mapr(function(x) {
+    return car(cdr(x));
+  }, car(cdr(exp)));
+};
+
+letVariables = function(exp) {
+  return mapr(car, car(cdr(exp)));
+};
+
 var noOperandsP, restOperands;
 
 var listOfValues = function(exps, env) {
@@ -526,6 +552,10 @@ makeIf = function(predicate, consequent, alternative) {
 
 makeLambda = function(parameters, body) {
   return cons("lambda", cons(parameters, body));
+};
+
+makeLet = function(parameters, arguments, body) {
+  return cons(makeLambda(parameters, body), arguments);
 };
 
 var makeProcedure = function(parameters, body, env) {
@@ -672,6 +702,11 @@ evl = function(exp, env) {
       continue;
     }
 
+    if (letP(exp)) {
+      exp = letToLambda(exp);
+      continue;
+    }
+
     if (applicationP(exp)) {
       var res = ap(evl(operator(exp), env), listOfValues(operands(exp), env));
 
@@ -756,7 +791,7 @@ var symbolP = function(x) {
 
 // RUN
 
-var mapr = function(f, xs) {
+mapr = function(f, xs) {
   var l = nil;
 
   while (xs !== nil) {

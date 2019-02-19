@@ -40,4 +40,6 @@
 (define (variable? exp)
   (symbol? exp))
 
-(extend-environment '(a b) '(1) '())
+(extend-environment '(a b) '(1 2) '())
+
+(let ((a 1) (b 2)) (+ a b))
