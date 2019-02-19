@@ -1,4 +1,4 @@
-/* global console */
+/* global console, process, require */
 
 // TOKEN READER
 
@@ -67,14 +67,16 @@ var tokenise = function(s) {
   );
 };
 
+// nil
+
+var nil = "nil";
+
 // PAIR
 
 function Pair(car, cdr) {
   this.car = car;
   this.cdr = cdr;
 }
-
-var nil = "nil";
 
 var car = function(x) {
   return x.car;
@@ -88,6 +90,17 @@ var cons = function(car, cdr) {
   return new Pair(car, cdr);
 };
 
+var list = function() {
+  var l = nil;
+  var a = [].slice.call(arguments);
+
+  for (var i = a.length - 1; i >= 0; i--) {
+    l = cons(a[i], l);
+  }
+
+  return l;
+};
+
 var pairP;
 
 var listP = function(x) {
@@ -98,8 +111,8 @@ var listToArray = function(xs) {
   var arr = [];
 
   while (xs !== nil) {
-    arr.push(xs.car);
-    xs = xs.cdr;
+    arr.push(car(xs));
+    xs = cdr(xs);
   }
 
   return arr;
@@ -140,7 +153,7 @@ var parseList = function(tr) {
       last = list;
     } else {
       last.cdr = cons(exp, nil);
-      last = last.cdr;
+      last = cdr(last);
     }
   }
 
@@ -208,14 +221,14 @@ var print = function(e, readably) {
     var res = "(";
 
     while (e !== nil) {
-      res += print(e.car) + " ";
+      res += print(car(e)) + " ";
 
-      if (!listP(e.cdr)) {
-        res += ". " + print(e.cdr, true) + " ";
+      if (!listP(cdr(e))) {
+        res += ". " + print(cdr(e), true) + " ";
         break;
       }
 
-      e = e.cdr;
+      e = cdr(e);
     }
 
     return res.substring(0, res.length - 1) + ")";
@@ -228,8 +241,10 @@ var print = function(e, readably) {
 
 var applicationP = pairP;
 
+var primitiveImplementation;
+
 var applyPrimitiveProcedure = function(f, args) {
-  return f.apply(null, listToArray(args));
+  return primitiveImplementation(f).apply(null, listToArray(args));
 };
 
 var taggedListP;
@@ -278,6 +293,21 @@ var condToIf = function(exp) {
   return expandClauses(condClauses(exp));
 };
 
+var findVariableEnvironment, findRoot;
+
+var defineVariable = function(key, val, env) {
+  var found = findVariableEnvironment(key, env);
+
+  if (found === null) {
+    var root = findRoot(env);
+    root[key] = val;
+  } else {
+    found[key] = val;
+  }
+
+  return "ok";
+};
+
 var definitionP = function(p) {
   return taggedListP(p, "define");
 };
@@ -309,11 +339,7 @@ var evalAssignment = function(exp, env) {
 };
 
 var evalDefinition = function(exp, env) {
-  definitionVariable(
-    definitionVariable(exp),
-    evl(definitionValue(exp), env),
-    env
-  );
+  defineVariable(definitionVariable(exp), evl(definitionValue(exp), env), env);
 
   return "ok";
 };
@@ -366,11 +392,13 @@ var extendEnvironment = function(vars, vals, baseEnv) {
 
   if (length(vars) === length(vals)) {
     while (vars !== nil) {
-      env[vars.car] = vals.car;
+      env[car(vars)] = car(vals);
 
-      vars = vars.cdr;
-      vals = vals.cdr;
+      vars = cdr(vars);
+      vals = cdr(vals);
     }
+
+    return env;
   } else {
     if (length(vars) < length(vals)) {
       throw new Error("Too many arguments supplied");
@@ -384,8 +412,16 @@ var falseP = function(exp) {
   return exp === "false";
 };
 
-var findVariableValue = function(key, env) {
-  while (env !== null) {
+findRoot = function(env) {
+  while (env._parent !== nil) {
+    env = env._parent;
+  }
+
+  return env;
+};
+
+findVariableEnvironment = function(key, env) {
+  while (env !== nil) {
     if (env.hasOwnProperty(key)) {
       return env;
     }
@@ -441,7 +477,7 @@ length = function(seq) {
 
   while (seq !== nil) {
     i++;
-    seq = seq.cdr;
+    seq = cdr(seq);
   }
 
   return i;
@@ -454,11 +490,14 @@ var listOfValues = function(exps, env) {
     return nil;
   }
 
-  cons(evl(firstOperand(exps), env), listOfValues(restOperands(exps), env));
+  return cons(
+    evl(firstOperand(exps), env),
+    listOfValues(restOperands(exps), env)
+  );
 };
 
 var lookupVariableValue = function(key, env) {
-  var found = findVariableValue(key, env);
+  var found = findVariableEnvironment(key, env);
 
   if (found === null) {
     throw "unbound variable - " + key;
@@ -468,33 +507,37 @@ var lookupVariableValue = function(key, env) {
 };
 
 var makeBegin = function(seq) {
-  cons("begin", seq);
+  return cons("begin", seq);
 };
 
 makeIf = function(predicate, consequent, alternative) {
-  cons("if", cons(predicate, cons(consequent, cons(alternative, nil))));
+  return cons("if", cons(predicate, cons(consequent, cons(alternative, nil))));
 };
 
 makeLambda = function(parameters, body) {
-  cons("lambda", cons(parameters, body));
+  return cons("lambda", cons(parameters, body));
 };
 
 var makeProcedure = function(parameters, body, env) {
-  cons("procedure", cons(parameters, cons(body, cons(env, nil))));
+  return cons("procedure", cons(parameters, cons(body, cons(env, nil))));
 };
-
-noOperandsP = nullP;
 
 nullP = function(exp) {
   return exp === nil;
 };
 
+noOperandsP = nullP;
+
 var operator = car;
 
 var operands = cdr;
 
-var primitiveProcedureP = function(exp) {
-  return typeof exp === "function";
+primitiveImplementation = function(proc) {
+  return car(cdr(proc));
+};
+
+var primitiveProcedureP = function(p) {
+  return taggedListP(p, "primitive");
 };
 
 var procedureBody = function(p) {
@@ -530,7 +573,7 @@ sequenceToExp = function(seq) {
 };
 
 setVariableValue = function(key, value, env) {
-  var found = findVariableValue(key, env);
+  var found = findVariableEnvironment(key, env);
 
   if (found === null) {
     throw "unbound variable - " + key;
@@ -580,8 +623,7 @@ evl = function(exp, env) {
     }
 
     if (variableP(exp)) {
-      exp = lookupVariableValue(exp, env);
-      continue;
+      return lookupVariableValue(exp, env);
     }
 
     if (quotedP(exp)) {
@@ -616,14 +658,20 @@ evl = function(exp, env) {
     }
 
     if (condP(exp)) {
-      env = condToIf(exp);
+      exp = condToIf(exp);
       continue;
     }
 
     if (applicationP(exp)) {
       var res = ap(evl(operator(exp), env), listOfValues(operands(exp), env));
+
+      if (res.primitive) {
+        return res.primitive;
+      }
+
       env = res.env;
       exp = res.exp;
+      continue;
     }
 
     throw new Error("Unknown expression type -- EVAL");
@@ -632,7 +680,7 @@ evl = function(exp, env) {
 
 ap = function(procedure, arguments) {
   if (primitiveProcedureP(procedure)) {
-    return applyPrimitiveProcedure(procedure, arguments);
+    return { primitive: applyPrimitiveProcedure(procedure, arguments) };
   }
 
   if (!compoundProcedure(procedure)) {
@@ -650,7 +698,77 @@ ap = function(procedure, arguments) {
   return { env: env, exp: exp };
 };
 
-var testStr = "'a";
-var core = { _parent: null };
+// RUN
 
-console.log(print(evl(parse(tokenise(testStr)), core), true));
+var mapr = function(f, xs) {
+  var l = nil;
+
+  while (xs !== nil) {
+    l = cons(f(car(xs)), l);
+    xs = cdr(xs);
+  }
+
+  return l;
+};
+
+var primitiveProcedures = list(
+  list("car", car),
+  list("cdr", cdr),
+  list("cons", cons),
+  list("null?", nullP)
+);
+
+var primitiveProcedureNames = function() {
+  return mapr(car, primitiveProcedures);
+};
+
+var primitiveProcedureObjects = function() {
+  return mapr(function(proc) {
+    return list("primitive", car(cdr(proc)));
+  }, primitiveProcedures);
+};
+
+var theEmptyEnvironment = nil;
+
+var setupEnvironment = function() {
+  var initialEnv = extendEnvironment(
+    primitiveProcedureNames(),
+    primitiveProcedureObjects(),
+    theEmptyEnvironment
+  );
+
+  defineVariable("true", "true", initialEnv);
+  defineVariable("false", "false", initialEnv);
+
+  return initialEnv;
+};
+
+var theGlobalEnvironment = setupEnvironment();
+
+var readline = require("readline");
+var rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: "lisp> "
+});
+
+rl.prompt();
+
+rl.on("line", function(line) {
+  line = line.trim();
+  switch (line) {
+    case "(quit)":
+      process.exit(0);
+      break;
+    default:
+      console.log(
+        print(evl(parse(tokenise(line)), theGlobalEnvironment), true)
+      );
+      break;
+  }
+  rl.prompt();
+}).on("close", function() {
+  process.exit(0);
+});
+
+//console.log(print(evl(parse(tokenise(testStr)), core), true));
