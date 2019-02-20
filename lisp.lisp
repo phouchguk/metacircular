@@ -85,6 +85,16 @@
           (error "LISP: Too many arguments supplied" vars vals)
           (error "LISP: Too few arguments supplied" vars vals))))
 
+(define (fact-iter product counter max-count)
+  (if (> counter max-count)
+      product
+      (fact-iter (* counter product)
+                 (+ counter 1)
+                 max-count)))
+
+(define (factorial n)
+  (fact-iter  1 1 n))
+
 (define (first-frame env) (car env))
 
 (define (frame-values frame) (cdr frame))

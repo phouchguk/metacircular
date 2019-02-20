@@ -813,12 +813,24 @@ var add = function(a, b) {
   return a + b;
 };
 
+var div = function(a, b) {
+  return a / b;
+};
+
 var eq = function(a, b) {
   return a === b;
 };
 
+var gt = function(a, b) {
+  return a > b;
+};
+
 var lt = function(a, b) {
   return a < b;
+};
+
+var mul = function(a, b) {
+  return a * b;
 };
 
 var numberP = function(x) {
@@ -827,6 +839,10 @@ var numberP = function(x) {
 
 var stringP = function(x) {
   return typeof x === "string" && x[0] === "$";
+};
+
+var sub = function(a, b) {
+  return a - b;
 };
 
 var symbolP = function(x) {
@@ -848,7 +864,11 @@ mapr = function(f, xs) {
 
 var primitiveProcedures = list(
   list("+", add),
+  list("/", div),
+  list("*", mul),
+  list("-", sub),
   list("=", boolify(eq)),
+  list(">", boolify(gt)),
   list("<", boolify(lt)),
   list("car", car),
   list("cdr", cdr),
