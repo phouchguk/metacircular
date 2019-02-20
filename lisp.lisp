@@ -31,6 +31,31 @@
 
 (define (cdddr exp) (cdr (cdr (cdr exp))))
 
+(define (definition? exp)
+  (tagged-list? exp 'define))
+
+(define (define-variable! var val env)
+  (let ((frame (first-frame env)))
+    (define (scan vars vals)
+      (cond ((null? vars)
+             (add-binding-to-frame! var val frame))
+            ((eq? var (car vars))
+             (set-car! vals val))
+            (else (scan (cdr vars) (cdr vals)))))
+    (scan (frame-variables frame)
+          (frame-values frame))))
+
+(define (definition-variable exp)
+  (if (symbol? (cadr exp))
+      (cadr exp)
+      (caadr exp)))
+
+(define (definition-value exp)
+  (if (symbol? (cadr exp))
+      (caddr exp)
+      (make-lambda (cdadr exp)
+                   (cddr exp))))
+
 (define (enclosing-environment env) (cdr env))
 
 (define (eval exp env)
@@ -38,7 +63,8 @@
         ((variable? exp) (lookup-variable-value exp env))
         ((quoted? exp) (text-of-quotation exp))
         ((assignment? exp) (eval-assignment exp env))
-        (else (error "Unknown expression type -- EVAL" env))))
+        ((definition? exp) (eval-definition exp env))
+        (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
   (set-variable-value! (assignment-variable exp)
@@ -46,12 +72,18 @@
                        env)
   'ok)
 
+(define (eval-definition exp env)
+  (define-variable! (definition-variable exp)
+                    (eval (definition-value exp) env)
+                    env)
+  'ok)
+
 (define (extend-environment vars vals base-env)
   (if (= (length vars) (length vals))
       (cons (make-frame vars vals) base-env)
-    (if (< (length vars) (length vals))
-        (error "Too many arguments supplied" vars vals)
-      (error "Too few arguments supplied" vars vals))))
+      (if (< (length vars) (length vals))
+          (error "LISP: Too many arguments supplied" vars vals)
+          (error "LISP: Too few arguments supplied" vars vals))))
 
 (define (first-frame env) (car env))
 
@@ -73,14 +105,17 @@
              (car vals))
             (else (scan (cdr vars) (cdr vals)))))
     (if (eq? env the-empty-environment)
-        (error "Unbound variable" var)
-      (let ((frame (first-frame env)))
-        (scan (frame-variables frame)
-              (frame-values frame)))))
+        (error "LISP: Unbound variable" var)
+        (let ((frame (first-frame env)))
+          (scan (frame-variables frame)
+                (frame-values frame)))))
   (env-loop env))
 
 (define (make-frame variables values)
   (cons variables values))
+
+(define (make-lambda parameters body)
+  (cons 'lambda (cons parameters body)))
 
 (define (quoted? exp)
   (tagged-list? exp 'quote))
@@ -99,11 +134,18 @@
              (set-car! vals val))
             (else (scan (cdr vars) (cdr vals)))))
     (if (eq? env the-empty-environment)
-        (error "Unbound variable -- SET!" var)
-      (let ((frame (first-frame env)))
-        (scan (frame-variables frame)
-              (frame-values frame)))))
+        (error "LISP: Unbound variable -- SET!" var)
+        (let ((frame (first-frame env)))
+          (scan (frame-variables frame)
+                (frame-values frame)))))
   (env-loop env))
+
+(define (setup-environment)
+  (let ((initial-env
+         (extend-environment '() '() the-empty-environment)))
+    (define-variable! 'true true initial-env)
+    (define-variable! 'false false initial-env)
+    initial-env))
 
 (define (tagged-list? exp tag)
   (if (pair? exp)
@@ -113,6 +155,8 @@
 (define (text-of-quotation exp) (cadr exp))
 
 (define the-empty-environment '())
+
+(define the-global-environment (setup-environment))
 
 (define (variable? exp)
   (symbol? exp))

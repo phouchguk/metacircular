@@ -73,16 +73,42 @@ var nil = "nil";
 
 // PAIR
 
+var validTypeP = function(x) {
+  return (
+    typeof x === "function" ||
+    typeof x === "string" ||
+    numberP(x) ||
+    pairP(x) ||
+    (typeof x === "object" && typeof x._parent !== "undefined")
+  );
+};
+
 function Pair(car, cdr) {
+  if (!validTypeP(car)) {
+    throw new Error("car is not a valid type - " + car);
+  }
+
+  if (!validTypeP(cdr)) {
+    throw new Error("cdr is not a valid type - " + cdr);
+  }
+
   this.car = car;
   this.cdr = cdr;
 }
 
 var car = function(x) {
+  if (!pairP(x)) {
+    throw new Error("can't take car of non-pair - " + x);
+  }
+
   return x.car;
 };
 
 var cdr = function(x) {
+  if (!pairP(x)) {
+    throw new Error("can't take cdr of non-pair - " + x);
+  }
+
   return x.cdr;
 };
 
@@ -123,11 +149,23 @@ pairP = function(x) {
 };
 
 var setCar = function(p, val) {
+  if (!pairP(p)) {
+    throw new Error(
+      "can't take set-car! of non-pair - " + p + " to " + print(val, true)
+    );
+  }
+
   p.car = val;
   return "ok";
 };
 
 var setCdr = function(p, val) {
+  if (!pairP(p)) {
+    throw new Error(
+      "can't take set-cdr! of non-pair - " + p + " to " + print(val, true)
+    );
+  }
+
   p.cdr = val;
   return "ok";
 };
@@ -719,6 +757,7 @@ evl = function(exp, env) {
       continue;
     }
 
+    console.log(print(exp, true));
     throw new Error("Unknown expression type -- EVAL");
   }
 };
@@ -750,6 +789,11 @@ var boolify = function(f) {
     var args = [].slice.call(arguments);
     return f.apply(null, args) ? "true" : "false";
   };
+};
+
+var display = function(x) {
+  console.log(print(x, true));
+  return "nil";
 };
 
 var error = function() {
@@ -809,6 +853,7 @@ var primitiveProcedures = list(
   list("car", car),
   list("cdr", cdr),
   list("cons", cons),
+  list("display", display),
   list("eq?", boolify(eq)),
   list("error", error),
   list("null?", boolify(nullP)),
@@ -875,6 +920,8 @@ rl.on("line", function(line) {
       process.exit(0);
       break;
     default:
+      //var line = "(eval '" + line + " the-empty-environment)";
+      //console.log(line);
       console.log(
         print(evl(parse(tokenise(line)), theGlobalEnvironment), true)
       );
