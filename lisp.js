@@ -1,5 +1,8 @@
 /* global console, process, require */
 
+var fs = require("fs");
+var readline = require("readline");
+
 // TOKEN READER
 
 function Rdr(ix) {
@@ -238,6 +241,30 @@ parse = function(tr) {
   // number
   return nr;
 };
+
+// conversion
+
+var jsToStr = function(s) {
+  return "$" + s;
+};
+
+var numToStr = function(n) {
+  return n + "";
+};
+
+var strToJs = function(s) {
+  return s.substring(1);
+};
+
+var strToSym = strToJs;
+
+var strToNum = function(s) {
+  var nr = parseFloat(s);
+
+  return isNaN(nr) ? nil : s;
+};
+
+var symToStr = jsToStr;
 
 // PRINT
 
@@ -845,6 +872,14 @@ numberP = function(x) {
   return typeof x === "number";
 };
 
+var read = function(s) {
+  return parse(tokenise(strToJs(s)));
+};
+
+var slurp = function(name) {
+  return jsToStr(fs.readFileSync(strToJs(name)));
+};
+
 var stringP = function(x) {
   return typeof x === "string" && x[0] === "$";
 };
@@ -887,11 +922,17 @@ var primitiveProcedures = list(
   list("not", boolify(falseP)),
   list("null?", boolify(nullP)),
   list("number?", boolify(numberP)),
+  //list("number->string", numToStr),
   list("pair?", boolify(pairP)),
+  list("read", read),
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
+  list("slurp", slurp),
   list("string?", boolify(stringP)),
+  //list("string->symbol", strToSym),
+  //list("string->number", strToNum),
   list("symbol?", boolify(symbolP)),
+  //list("symbol->string", symToStr),
   list("time", time)
 );
 
@@ -921,9 +962,6 @@ var setupEnvironment = function() {
 };
 
 var theGlobalEnvironment = setupEnvironment();
-
-var fs = require("fs");
-var readline = require("readline");
 
 console.log(
   print(
