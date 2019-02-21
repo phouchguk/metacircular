@@ -880,6 +880,7 @@ var primitiveProcedures = list(
   list("display", display),
   list("eq?", boolify(eq)),
   list("error", error),
+  list("not", boolify(falseP)),
   list("null?", boolify(nullP)),
   list("number?", boolify(numberP)),
   list("pair?", boolify(pairP)),

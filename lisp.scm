@@ -10,27 +10,17 @@
 (define (assignment-variable exp) (cadr exp))
 
 (define (caar exp) (car (car exp)))
-
 (define (cadr exp) (car (cdr exp)))
-
 (define (cdar exp) (cdr (car exp)))
-
 (define (cddr exp) (cdr (cdr exp)))
-
 (define (caaar exp) (car (car (car exp))))
-
 (define (caadr exp) (car (car (cdr exp))))
-
 (define (cadar exp) (car (cdr (car exp))))
-
 (define (caddr exp) (car (cdr (cdr exp))))
-
 (define (cdaar exp) (cdr (car (car exp))))
-
+(define (cdadr exp) (cdr (car (cdr exp))))
 (define (cddar exp) (cdr (cdr (car exp))))
-
 (define (cdddr exp) (cdr (cdr (cdr exp))))
-
 (define (caaaar exp) (car (car (car (car exp)))))
 (define (caaadr exp) (car (car (car (cdr exp)))))
 (define (caadar exp) (car (car (cdr (car exp)))))
@@ -96,6 +86,11 @@
                     env)
   'ok)
 
+(define (eval-if exp env)
+  (if (true? (eval (if-predicate exp) env))
+      (eval (if-consequent exp) env)
+      (eval (if-alternative exp) env)))
+
 (define (extend-environment vars vals base-env)
   (if (= (length vars) (length vals))
       (cons (make-frame vars vals) base-env)
@@ -157,8 +152,6 @@
 (define (make-lambda parameters body)
   (cons 'lambda (cons parameters body)))
 
-(define (not x) (false? x))
-
 (define (quoted? exp)
   (tagged-list? exp 'quote))
 
@@ -199,6 +192,8 @@
 (define the-empty-environment '())
 
 (define the-global-environment (setup-environment))
+
+(define (true? x) (not (not x)))
 
 (define (variable? exp)
   (symbol? exp))
