@@ -34,6 +34,7 @@ function TokenResult(strs, tokens) {
 var tokenise = function(s) {
   var strs = [];
 
+  var reComment = /;(.*)\n/g;
   var reStr = /"(?:[^"\\]|\\.)*"/g;
   var reDelimiter = /\(|\)|\[|\]|'|`|,/g;
   var reDupeSpace = /\s\s+/g;
@@ -59,6 +60,7 @@ var tokenise = function(s) {
   return new TokenResult(
     strs,
     s
+      .replace(reComment, "\n")
       .replace(reStr, replaceStrs)
       .replace(reDelimiter, addSpaces)
       .replace(reDupeSpace, " ")
@@ -72,6 +74,8 @@ var tokenise = function(s) {
 var nil = "nil";
 
 // PAIR
+
+var numberP, pairP;
 
 var validTypeP = function(x) {
   return (
@@ -127,8 +131,6 @@ var list = function() {
   return l;
 };
 
-var pairP;
-
 var listP = function(x) {
   return x === nil || pairP(x);
 };
@@ -147,6 +149,8 @@ var listToArray = function(xs) {
 pairP = function(x) {
   return x instanceof Pair;
 };
+
+var print;
 
 var setCar = function(p, val) {
   if (!pairP(p)) {
@@ -237,7 +241,7 @@ parse = function(tr) {
 
 // PRINT
 
-var print = function(e, readably) {
+print = function(e, readably) {
   if (typeof e === "number") {
     return e;
   }
@@ -833,7 +837,7 @@ var mul = function(a, b) {
   return a * b;
 };
 
-var numberP = function(x) {
+numberP = function(x) {
   return typeof x === "number";
 };
 
@@ -918,7 +922,7 @@ var readline = require("readline");
 console.log(
   print(
     evl(
-      parse(tokenise("(begin " + fs.readFileSync("lisp.lisp") + ")")),
+      parse(tokenise("(begin " + fs.readFileSync("lisp.scm") + ")")),
       theGlobalEnvironment
     ),
     true

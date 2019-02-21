@@ -31,6 +31,23 @@
 
 (define (cdddr exp) (cdr (cdr (cdr exp))))
 
+(define (caaaar exp) (car (car (car (car exp)))))
+(define (caaadr exp) (car (car (car (cdr exp)))))
+(define (caadar exp) (car (car (cdr (car exp)))))
+(define (caaddr exp) (car (car (cdr (cdr exp)))))
+(define (cadaar exp) (car (cdr (car (car exp)))))
+(define (cadadr exp) (car (cdr (car (cdr exp)))))
+(define (caddar exp) (car (cdr (cdr (car exp)))))
+(define (cadddr exp) (car (cdr (cdr (cdr exp)))))
+(define (cdaaar exp) (cdr (car (car (car exp)))))
+(define (cdaadr exp) (cdr (car (car (cdr exp)))))
+(define (cdadar exp) (cdr (car (cdr (car exp)))))
+(define (cdaddr exp) (cdr (car (cdr (cdr exp)))))
+(define (cddaar exp) (cdr (cdr (car (car exp)))))
+(define (cddadr exp) (cdr (cdr (car (cdr exp)))))
+(define (cdddar exp) (cdr (cdr (cdr (car exp)))))
+(define (cddddr exp) (cdr (cdr (cdr (cdr exp)))))
+
 (define (definition? exp)
   (tagged-list? exp 'define))
 
@@ -53,8 +70,8 @@
 (define (definition-value exp)
   (if (symbol? (cadr exp))
       (caddr exp)
-      (make-lambda (cdadr exp)
-                   (cddr exp))))
+      (make-lambda (cdadr exp)   ; formal parameters
+                   (cddr exp)))) ; body
 
 (define (enclosing-environment env) (cdr env))
 
@@ -64,6 +81,7 @@
         ((quoted? exp) (text-of-quotation exp))
         ((assignment? exp) (eval-assignment exp env))
         ((definition? exp) (eval-definition exp env))
+        ((if? exp) (eval-if exp env))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
@@ -101,6 +119,18 @@
 
 (define (frame-variables frame) (car frame))
 
+(define (if? exp)
+  (tagged-list? exp 'if))
+
+(define (if-alternative exp)
+  (if (not (null? (cdddr exp)))
+      (cadddr exp)
+      'false))
+
+(define (if-consequent exp) (caddr exp))
+
+(define (if-predicate exp) (cadr exp))
+
 (define (length x)
   (define (length-iter x i)
     (if (null? x) i (length-iter (cdr x) (+ 1 i))))
@@ -126,6 +156,8 @@
 
 (define (make-lambda parameters body)
   (cons 'lambda (cons parameters body)))
+
+(define (not x) (false? x))
 
 (define (quoted? exp)
   (tagged-list? exp 'quote))
