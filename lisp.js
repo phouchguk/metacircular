@@ -60,8 +60,8 @@ var tokenise = function(s) {
   return new TokenResult(
     strs,
     s
-      .replace(reComment, "\n")
       .replace(reStr, replaceStrs)
+      .replace(reComment, "\n")
       .replace(reDelimiter, addSpaces)
       .replace(reDupeSpace, " ")
       .trim()
@@ -688,6 +688,10 @@ var textOfQuotation = function(exp) {
   return car(cdr(exp));
 };
 
+var time = function() {
+  return new Date().getTime();
+};
+
 var trueP = function(exp) {
   return !falseP(exp);
 };
@@ -887,7 +891,8 @@ var primitiveProcedures = list(
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
   list("string?", boolify(stringP)),
-  list("symbol?", boolify(symbolP))
+  list("symbol?", boolify(symbolP)),
+  list("time", time)
 );
 
 var primitiveProcedureNames = function() {
