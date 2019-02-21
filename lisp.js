@@ -249,7 +249,7 @@ var jsToStr = function(s) {
 };
 
 var numToStr = function(n) {
-  return n + "";
+  return jsToStr(n + "");
 };
 
 var strToJs = function(s) {
@@ -259,9 +259,9 @@ var strToJs = function(s) {
 var strToSym = strToJs;
 
 var strToNum = function(s) {
-  var nr = parseFloat(s);
+  var nr = parseFloat(strToJs(s));
 
-  return isNaN(nr) ? nil : s;
+  return isNaN(nr) ? nil : nr;
 };
 
 var symToStr = jsToStr;
@@ -922,17 +922,17 @@ var primitiveProcedures = list(
   list("not", boolify(falseP)),
   list("null?", boolify(nullP)),
   list("number?", boolify(numberP)),
-  //list("number->string", numToStr),
+  list("number->string", numToStr),
   list("pair?", boolify(pairP)),
   list("read", read),
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
   list("slurp", slurp),
   list("string?", boolify(stringP)),
-  //list("string->symbol", strToSym),
-  //list("string->number", strToNum),
+  list("string->symbol", strToSym),
+  list("string->number", strToNum),
   list("symbol?", boolify(symbolP)),
-  //list("symbol->string", symToStr),
+  list("symbol->string", symToStr),
   list("time", time)
 );
 
