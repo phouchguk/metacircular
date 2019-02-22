@@ -72,6 +72,10 @@
         ((assignment? exp) (eval-assignment exp env))
         ((definition? exp) (eval-definition exp env))
         ((if? exp) (eval-if exp env))
+        ((lambda? exp)
+         (make-procedure (lambda-parameters exp)
+                         (lambda-body exp)
+                         env))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
@@ -126,6 +130,13 @@
 
 (define (if-predicate exp) (cadr exp))
 
+(define (lambda? exp)
+  (tagged-list? exp 'lambda))
+
+(define (lambda-body exp) (cddr exp))
+
+(define (lambda-parameters exp) (cadr exp))
+
 (define (length x)
   (define (length-iter x i)
     (if (null? x) i (length-iter (cdr x) (+ 1 i))))
@@ -151,6 +162,9 @@
 
 (define (make-lambda parameters body)
   (cons 'lambda (cons parameters body)))
+
+(define (make-procedure parameters body env)
+  (list 'procedure parameters body env))
 
 (define (quoted? exp)
   (tagged-list? exp 'quote))
