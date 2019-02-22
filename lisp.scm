@@ -9,6 +9,11 @@
 
 (define (assignment-variable exp) (cadr exp))
 
+(define (begin? exp)
+  (tagged-list? exp 'begin))
+
+(define (begin-actions exp) (cdr exp))
+
 (define (caar exp) (car (car exp)))
 (define (cadr exp) (car (cdr exp)))
 (define (cdar exp) (cdr (car exp)))
@@ -76,6 +81,8 @@
          (make-procedure (lambda-parameters exp)
                          (lambda-body exp)
                          env))
+        ((begin? exp)
+         (eval-sequence (begin-actions exp) env))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
@@ -95,6 +102,11 @@
       (eval (if-consequent exp) env)
       (eval (if-alternative exp) env)))
 
+(define (eval-sequence exps env)
+  (cond ((last-exp? exps) (eval (first-exp exps) env))
+        (else (eval (first-exp exps) env)
+              (eval-sequence (rest-exps exps) env))))
+
 (define (extend-environment vars vals base-env)
   (if (= (length vars) (length vals))
       (cons (make-frame vars vals) base-env)
@@ -111,6 +123,8 @@
 
 (define (factorial n)
   (fact-iter  1 1 n))
+
+(define (first-exp seq) (car seq))
 
 (define (first-frame env) (car env))
 
@@ -136,6 +150,8 @@
 (define (lambda-body exp) (cddr exp))
 
 (define (lambda-parameters exp) (cadr exp))
+
+(define (last-exp? seq) (null? (cdr seq)))
 
 (define (length x)
   (define (length-iter x i)
@@ -168,6 +184,8 @@
 
 (define (quoted? exp)
   (tagged-list? exp 'quote))
+
+(define (rest-exps seq) (cdr seq))
 
 (define (self-evaluating? exp)
   (cond ((number? exp) true)
