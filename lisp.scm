@@ -43,6 +43,21 @@
 (define (cdddar exp) (cdr (cdr (cdr (car exp)))))
 (define (cddddr exp) (cdr (cdr (cdr (cdr exp)))))
 
+(define (cond? exp)
+  (tagged-list? exp 'cond))
+
+(define (cond-actions clause) (cdr clause))
+
+(define (cond-clauses exp) (cdr exp))
+
+(define (cond-else-clause? clause)
+  (eq? (cond-predicate clause) 'else))
+
+(define (cond->if exp)
+  (expand-clauses (cond-clauses exp)))
+
+(define (cond-predicate clause) (car clause))
+
 (define (definition? exp)
   (tagged-list? exp 'define))
 
@@ -83,6 +98,7 @@
                          env))
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
+        ((cond? exp) (eval (cond->if exp) env))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
@@ -106,6 +122,20 @@
   (cond ((last-exp? exps) (eval (first-exp exps) env))
         (else (eval (first-exp exps) env)
               (eval-sequence (rest-exps exps) env))))
+
+(define (expand-clauses clauses)
+  (if (null? clauses)
+      'false
+      (let ((first (car clauses))
+            (rest (cdr clauses)))
+        (if (cond-else-clause? first)
+            (if (null? rest)
+                (sequence->exp (cond-actions first))
+                (error "LISP: ELSE clause isn't last -- COND->IF"
+                   clauses))
+            (make-if (cond-predicate first)
+                     (sequence->exp (cond-actions first))
+                     (expand-clauses rest))))))
 
 (define (extend-environment vars vals base-env)
   (if (= (length vars) (length vals))
@@ -173,8 +203,13 @@
                 (frame-values frame)))))
   (env-loop env))
 
+(define (make-begin seq) (cons 'begin seq))
+
 (define (make-frame variables values)
   (cons variables values))
+
+(define (make-if predicate consequent alternative)
+  (list 'if predicate consequent alternative))
 
 (define (make-lambda parameters body)
   (cons 'lambda (cons parameters body)))
@@ -191,6 +226,11 @@
   (cond ((number? exp) true)
         ((string? exp) true)
         (else false)))
+
+(define (sequence->exp seq)
+  (cond ((null? seq) seq)
+        ((last-exp? seq) (first-exp seq))
+        (else (make-begin seq))))
 
 (define (set-variable-value! var val env)
   (define (env-loop env)
