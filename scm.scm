@@ -1,3 +1,19 @@
+(define orig-apply apply)
+
+(define (apply procedure arguments)
+  (cond ((primitive-procedure? procedure)
+          (apply-primitive-procedure procedure arguments))
+         ((compound-procedure? procedure)
+          (eval-sequence
+           (procedure-body procedure)
+           (extend-environment
+            (procedure-parameters procedure)
+            arguments
+            (procedure-environment procedure))))
+         (else
+          (error
+           "LISP: Unknown procedure type -- APPLY" procedure))))
+
 (define (add-binding-to-frame! var val frame)
   (set-car! frame (cons var (car frame)))
   (set-cdr! frame (cons val (cdr frame))))
@@ -5,7 +21,7 @@
 (define (application? exp) (pair? exp))
 
 (define (apply-primitive-procedure proc args)
-  (apply (primitive-implementation proc) args))
+  (orig-apply (primitive-implementation proc) args))
 
 (define (assignment? exp)
   (tagged-list? exp 'set!))
@@ -107,8 +123,8 @@
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
-        ((application exp?)
-         (lisp-apply (eval (operator exp) env)
+        ((application? exp)
+         (apply (eval (operator exp) env)
                 (list-of-values (operands exp) env)))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
@@ -201,20 +217,6 @@
     (if (null? x) i (length-iter (cdr x) (+ 1 i))))
   (length-iter x 0))
 
-(define (lisp-apply procedure arguments)
-  (ccons ((primitive-procedure? procedure)
-          (apply-primitive-procedure procedure arguments))
-         ((compound-procedure? procedure)
-          (eval-sequence
-           (procedure-body procedure)
-           (extend-environment
-            (procedure-parameters procedure)
-            arguments
-            (procedure-environment procedure))))
-         (else
-          (error
-           "LISP: Unknown procedure type -- APPLY" procedure))))
-
 (define (list-of-values exps env)
   (if (no-operands? exps)
       '()
@@ -250,6 +252,14 @@
 (define (make-procedure parameters body env)
   (list 'procedure parameters body env))
 
+(define (map f xs)
+  (reverse (mapr f xs)))
+
+(define (mapr f xs)
+  (if (null? xs)
+      '()
+      (cons (f (car xs)) (mapr f (cdr xs)))))
+
 (define (no-operands? ops) (null? ops))
 
 (define (operands exp) (cdr exp))
@@ -260,6 +270,16 @@
 
 (define (primitive-procedure? proc)
   (tagged-list? proc 'primitive))
+
+(define (primitive-procedure-names)
+  (map car primitive-procedures))
+
+(define (primitive-procedure-objects)
+  (map (lambda (proc) (list 'primitive (cadr proc)))
+       primitive-procedures))
+
+(define primitive-procedures
+  (list (list '+ +)))
 
 (define (procedure-body p) (caddr p))
 
@@ -273,6 +293,11 @@
 (define (rest-exps seq) (cdr seq))
 
 (define (rest-operands ops) (cdr ops))
+
+(define (reverse xs)
+  (if (null? xs)
+      '()
+      (cons (car xs) (reverse (cdr xs)))))
 
 (define (self-evaluating? exp)
   (cond ((number? exp) true)
@@ -301,7 +326,9 @@
 
 (define (setup-environment)
   (let ((initial-env
-         (extend-environment '() '() the-empty-environment)))
+         (extend-environment (primitive-procedure-names)
+                             (primitive-procedure-objects)
+                             the-empty-environment)))
     (define-variable! 'true true initial-env)
     (define-variable! 'false false initial-env)
     initial-env))
@@ -321,3 +348,5 @@
 
 (define (variable? exp)
   (symbol? exp))
+
+(inc-lisp-depth!)

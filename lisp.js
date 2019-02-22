@@ -296,6 +296,10 @@ print = function(e, readably) {
     }
   }
 
+  if (typeof e === "function") {
+    return "<bif>";
+  }
+
   if (pairP(e)) {
     var res = "(";
 
@@ -804,9 +808,9 @@ evl = function(exp, env) {
   }
 };
 
-ap = function(procedure, arguments) {
+ap = function(procedure, args) {
   if (primitiveProcedureP(procedure)) {
-    return { primitive: applyPrimitiveProcedure(procedure, arguments) };
+    return { primitive: applyPrimitiveProcedure(procedure, args) };
   }
 
   if (!compoundProcedure(procedure)) {
@@ -815,7 +819,7 @@ ap = function(procedure, arguments) {
 
   var env = extendEnvironment(
     procedureParameters(procedure),
-    arguments,
+    args,
     procedureEnvironment(procedure)
   );
 
@@ -902,7 +906,9 @@ var incLispDepth = function() {
 };
 
 var slurp = function(name) {
-  return jsToStr(fs.readFileSync(strToJs(name)));
+  // temporarily make slurp wrap in a begin until
+  // we have str concat
+  return jsToStr("(begin " + fs.readFileSync(strToJs(name)) + ")");
 };
 
 var stringP = function(x) {
@@ -1025,8 +1031,7 @@ rl.on("line", function(line) {
       process.exit(0);
       break;
     default:
-      //var line = "(eval '" + line + " the-empty-environment)";
-      //console.log(line);
+      var line = "(eval '" + line + " the-global-environment)";
       console.log(
         print(evl(parse(tokenise(line)), theGlobalEnvironment), true)
       );
