@@ -312,6 +312,12 @@ print = function(e, readably) {
 
     return res.substring(0, res.length - 1) + ")";
   }
+
+  if (typeof e === "object" && typeof e._parent !== "undefined") {
+    return "<env>";
+  }
+
+  throw new Error("don't know how to print: " + e);
 };
 
 // EVAL - APPLY
@@ -707,6 +713,7 @@ var selfEvaluatingP = function(exp) {
   return false;
 };
 
+
 taggedListP = function(exp, tag) {
   return listP(exp) && car(exp) === tag;
 };
@@ -844,6 +851,16 @@ var error = function() {
   throw new Error(print(args[0], true));
 };
 
+var myApply = function(f, args) {
+  var result = ap(f, args);
+
+  if (result.primitive) {
+    return result.primitive;
+  }
+
+  return evl(result.exp, result.env);
+}
+
 var add = function(a, b) {
   return a + b;
 };
@@ -864,6 +881,8 @@ var lt = function(a, b) {
   return a < b;
 };
 
+var lispDepth = 0;
+
 var mul = function(a, b) {
   return a * b;
 };
@@ -874,6 +893,12 @@ numberP = function(x) {
 
 var read = function(s) {
   return parse(tokenise(strToJs(s)));
+};
+
+var incLispDepth = function() {
+  lispDepth++;
+  rl._prompt = getPrompt();
+  return "ok";
 };
 
 var slurp = function(name) {
@@ -913,12 +938,15 @@ var primitiveProcedures = list(
   list("=", boolify(eq)),
   list(">", boolify(gt)),
   list("<", boolify(lt)),
+  list("apply", myApply),
   list("car", car),
   list("cdr", cdr),
   list("cons", cons),
   list("display", display),
   list("eq?", boolify(eq)),
   list("error", error),
+  list("eval", evl),
+  list("inc-lisp-depth!", incLispDepth),
   list("list", list),
   list("not", boolify(falseP)),
   list("null?", boolify(nullP)),
@@ -928,6 +956,7 @@ var primitiveProcedures = list(
   list("read", read),
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
+  list("inc-lisp-depth!", incLispDepth),
   list("slurp", slurp),
   list("string?", boolify(stringP)),
   list("string->symbol", strToSym),
@@ -963,7 +992,9 @@ var setupEnvironment = function() {
 };
 
 var theGlobalEnvironment = setupEnvironment();
+defineVariable("the-global-environment", theGlobalEnvironment, theGlobalEnvironment);
 
+/*
 console.log(
   print(
     evl(
@@ -973,11 +1004,16 @@ console.log(
     true
   )
 );
+*/
+
+var getPrompt = function() {
+  return "lisp" + lispDepth + "> ";
+};
 
 var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  prompt: "lisp> "
+  prompt: getPrompt()
 });
 
 rl.prompt();

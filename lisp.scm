@@ -2,6 +2,11 @@
   (set-car! frame (cons var (car frame)))
   (set-cdr! frame (cons val (cdr frame))))
 
+(define (application? exp) (pair? exp))
+
+(define (apply-primitive-procedure proc args)
+  (apply (primitive-implementation proc) args))
+
 (define (assignment? exp)
   (tagged-list? exp 'set!))
 
@@ -42,6 +47,9 @@
 (define (cddadr exp) (cdr (cdr (car (cdr exp)))))
 (define (cdddar exp) (cdr (cdr (cdr (car exp)))))
 (define (cddddr exp) (cdr (cdr (cdr (cdr exp)))))
+
+(define (compound-procedure? p)
+  (tagged-list? p 'procedure))
 
 (define (cond? exp)
   (tagged-list? exp 'cond))
@@ -99,6 +107,9 @@
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
+        ((application exp?)
+         (lisp-apply (eval (operator exp) env)
+                (list-of-values (operands exp) env)))
         (else (error "LISP: Unknown expression type -- EVAL" env))))
 
 (define (eval-assignment exp env)
@@ -158,6 +169,8 @@
 
 (define (first-frame env) (car env))
 
+(define (first-operand ops) (car ops))
+
 (define (frame-values frame) (cdr frame))
 
 (define (frame-variables frame) (car frame))
@@ -188,6 +201,26 @@
     (if (null? x) i (length-iter (cdr x) (+ 1 i))))
   (length-iter x 0))
 
+(define (lisp-apply procedure arguments)
+  (ccons ((primitive-procedure? procedure)
+          (apply-primitive-procedure procedure arguments))
+         ((compound-procedure? procedure)
+          (eval-sequence
+           (procedure-body procedure)
+           (extend-environment
+            (procedure-parameters procedure)
+            arguments
+            (procedure-environment procedure))))
+         (else
+          (error
+           "LISP: Unknown procedure type -- APPLY" procedure))))
+
+(define (list-of-values exps env)
+  (if (no-operands? exps)
+      '()
+      (cons (eval (first-operand exps) env)
+            (list-of-values (rest-operands exps) env))))
+
 (define (lookup-variable-value var env)
   (define (env-loop env)
     (define (scan vars vals)
@@ -217,10 +250,29 @@
 (define (make-procedure parameters body env)
   (list 'procedure parameters body env))
 
+(define (no-operands? ops) (null? ops))
+
+(define (operands exp) (cdr exp))
+
+(define (operator exp) (car exp))
+
+(define (primitive-implementation proc) (cadr proc))
+
+(define (primitive-procedure? proc)
+  (tagged-list? proc 'primitive))
+
+(define (procedure-body p) (caddr p))
+
+(define (procedure-environment p) (cadddr p))
+
+(define (procedure-parameters p) (cadr p))
+
 (define (quoted? exp)
   (tagged-list? exp 'quote))
 
 (define (rest-exps seq) (cdr seq))
+
+(define (rest-operands ops) (cdr ops))
 
 (define (self-evaluating? exp)
   (cond ((number? exp) true)
