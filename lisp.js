@@ -962,11 +962,10 @@ var primitiveProcedures = list(
   list("read", read),
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
-  list("inc-lisp-depth!", incLispDepth),
   list("slurp", slurp),
   list("string?", boolify(stringP)),
-  list("string->symbol", strToSym),
   list("string->number", strToNum),
+  list("string->symbol", strToSym),
   list("symbol?", boolify(symbolP)),
   list("symbol->string", symToStr),
   list("time", time)
