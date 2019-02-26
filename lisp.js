@@ -162,6 +162,10 @@ var setCar = function(p, val) {
     );
   }
 
+  if (!validTypeP(val)) {
+    throw new Error("set-car! value is not a valid type - " + val);
+  }
+
   p.car = val;
   return "ok";
 };
@@ -171,6 +175,10 @@ var setCdr = function(p, val) {
     throw new Error(
       "can't take set-cdr! of non-pair - " + p + " to " + print(val, true)
     );
+  }
+
+  if (!validTypeP(val)) {
+    throw new Error("set-cdr! value is not a valid type - " + val);
   }
 
   p.cdr = val;
@@ -301,6 +309,10 @@ print = function(e, readably) {
   }
 
   if (pairP(e)) {
+    if (car(e) === "procedure") {
+      return "<proc>";
+    }
+
     var res = "(";
 
     while (e !== nil) {

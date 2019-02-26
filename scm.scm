@@ -349,13 +349,15 @@
   (env-loop env))
 
 (define (setup-environment)
-  (let ((initial-env
-         (extend-environment (primitive-procedure-names)
-                             (primitive-procedure-objects)
-                             the-empty-environment)))
-    (define-variable! 'true true initial-env)
-    (define-variable! 'false false initial-env)
-    initial-env))
+  (let ((names (primitive-procedure-names))
+        (objects (primitive-procedure-objects)))
+    (let ((initial-env
+           (extend-environment names
+                               objects
+                               the-empty-environment)))
+      (define-variable! 'true true initial-env)
+      (define-variable! 'false false initial-env)
+      initial-env)))
 
 (define (tagged-list? exp tag)
   (if (pair? exp)
