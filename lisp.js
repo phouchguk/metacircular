@@ -717,7 +717,6 @@ var selfEvaluatingP = function(exp) {
   return false;
 };
 
-
 taggedListP = function(exp, tag) {
   return listP(exp) && car(exp) === tag;
 };
@@ -863,7 +862,7 @@ var myApply = function(f, args) {
   }
 
   return evl(result.exp, result.env);
-}
+};
 
 var add = function(a, b) {
   return a + b;
@@ -875,6 +874,17 @@ var div = function(a, b) {
 
 var eq = function(a, b) {
   return a === b;
+};
+
+var equal = function(a, b) {
+  if (pairP(a) && pairP(b)) {
+    if (!equal(car(a), car(b))) {
+      return false;
+    }
+    return equal(cdr(a), cdr(b));
+  } else {
+    return eq(a, b);
+  }
 };
 
 var gt = function(a, b) {
@@ -897,6 +907,10 @@ numberP = function(x) {
 
 var read = function(s) {
   return parse(tokenise(strToJs(s)));
+};
+
+var remainder = function(a, b) {
+  return a % b;
 };
 
 var incLispDepth = function() {
@@ -950,6 +964,7 @@ var primitiveProcedures = list(
   list("cons", cons),
   list("display", display),
   list("eq?", boolify(eq)),
+  list("equal?", boolify(equal)),
   list("error", error),
   list("eval", evl),
   list("inc-lisp-depth!", incLispDepth),
@@ -960,6 +975,7 @@ var primitiveProcedures = list(
   list("number->string", numToStr),
   list("pair?", boolify(pairP)),
   list("read", read),
+  list("remainder", remainder),
   list("set-car!", setCar),
   list("set-cdr!", setCdr),
   list("slurp", slurp),
@@ -997,7 +1013,11 @@ var setupEnvironment = function() {
 };
 
 var theGlobalEnvironment = setupEnvironment();
-defineVariable("the-global-environment", theGlobalEnvironment, theGlobalEnvironment);
+defineVariable(
+  "the-global-environment",
+  theGlobalEnvironment,
+  theGlobalEnvironment
+);
 
 /*
 console.log(
@@ -1010,6 +1030,15 @@ console.log(
   )
 );
 */
+
+evl(
+  parse(
+    tokenise(
+      "(define (load file) (eval (read (slurp file)) the-global-environment)))"
+    )
+  ),
+  theGlobalEnvironment
+);
 
 var getPrompt = function() {
   return "lisp" + lispDepth + "> ";
