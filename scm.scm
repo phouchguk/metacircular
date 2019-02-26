@@ -94,6 +94,7 @@
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
+        ((let? exp) (eval (let->lambda exp) env))
         ((application? exp)
          (apply (eval (operator exp) env)
                 (list-of-values (operands exp) env)))
@@ -188,6 +189,23 @@
     (if (null? x) i (length-iter (cdr x) (+ 1 i))))
   (length-iter x 0))
 
+(define (let? exp)
+  (tagged-list? exp 'let))
+
+(define (let-body exp)
+  (cddr exp))
+
+(define (let-values exp)
+  (mapr (lambda (x) (cadr x)) (cadr exp)))
+
+(define (let-variables exp)
+  (mapr car (cadr exp)))
+
+(define (let->lambda exp)
+  (make-let (let-variables exp)
+            (let-values exp)
+            (let-body exp)))
+
 (define (list-of-values exps env)
   (if (no-operands? exps)
       '()
@@ -219,6 +237,9 @@
 
 (define (make-lambda parameters body)
   (cons 'lambda (cons parameters body)))
+
+(define (make-let parameters arguments body)
+  (cons (make-lambda parameters body) arguments))
 
 (define (make-procedure parameters body env)
   (list 'procedure parameters body env))
@@ -267,6 +288,7 @@
         (list 'eval eval)
         (list 'inc-lisp-depth! inc-lisp-depth!)
         (list 'list list)
+        (list 'load load)
         (list 'not not)
         (list 'null? null?)
         (list 'number? number?)
@@ -274,7 +296,7 @@
         (list 'pair? pair?)
         (list 'read read)
         (list 'set-car! set-car!)
-        (list 'set-cdr set-cdr!)
+        (list 'set-cdr! set-cdr!)
         (list 'slurp slurp)
         (list 'string? string?)
         (list 'string->number string->number)
