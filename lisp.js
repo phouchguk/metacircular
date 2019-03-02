@@ -27,7 +27,7 @@ Rdr.prototype.pop = function() {
   return this.ix[this.cursor++];
 };
 
-// T OKENISE
+// TOKENISE
 
 function TokenResult(strs, tokens) {
   this.strs = strs;
@@ -805,17 +805,17 @@ evl = function(exp, env) {
     if (applicationP(exp)) {
       var res = ap(evl(operator(exp), env), listOfValues(operands(exp), env));
 
-      if (res.primitive) {
+      if (typeof res.primitive !== "undefined") {
         return res.primitive;
       }
 
       env = res.env;
       exp = res.exp;
+
       continue;
     }
 
-    console.log(print(exp, true));
-    throw new Error("Unknown expression type -- EVAL");
+    throw new Error("Unknown expression type -- EVAL: " + exp);
   }
 };
 
